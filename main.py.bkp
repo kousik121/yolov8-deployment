@@ -1,0 +1,68 @@
+from fastapi.templating import Jinja2Templates
+from ultralytics import YOLO
+import io
+import os
+import cv2
+import torch
+from fastapi import FastAPI, File, UploadFile, HTTPException, Response, status
+from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import aiofiles
+from fastapi.responses import JSONResponse
+import shutil
+from fastapi.staticfiles import StaticFiles
+from datetime import datetime
+
+timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+def generate_html_response():
+    html_content = """
+    <html>
+      <body>
+        <video width="320" height="240" controls>
+	  <source src="/static/video.mp4?{timestamp}" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+      </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content, status_code=200)
+
+
+@app.post("/uploadfile/")
+async def create_upload_file(item: UploadFile):
+	if os.path.exists("./runs"):
+		shutil.rmtree("./runs")
+	fn = item.filename
+	model = YOLO("yolov8n.pt")
+	data = await item.read()
+	if fn.split(".")[-1] in ["jpg", "jpeg", "png"]:
+		with open("image."+fn.split(".")[-1], "wb") as f:
+			f.write(data)
+		print(fn.split(".")[-1])
+		model.predict("image."+fn.split(".")[-1], save=True)
+		output_file_path ="./runs/detect/predict/image."+fn.split(".")[-1]
+		return FileResponse(output_file_path)
+
+
+	elif fn.split(".")[-1] in ["mov", "mp4"]:
+		with open("video."+fn.split(".")[-1], "wb") as f:
+			f.write(data)
+		model.predict("video."+fn.split(".")[-1], save=True)
+		output_file_path ="./runs/detect/predict/video.mp4"
+		shutil.copy(output_file_path, "./static/video.mp4")
+		return {"message" : "done"}
+
+@app.get("/video/", response_class=HTMLResponse)
+async def read_items():
+    return generate_html_response()
+
+
+
+
+
+
+
