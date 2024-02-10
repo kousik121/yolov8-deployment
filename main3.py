@@ -130,6 +130,9 @@ async def create_upload_file(item: UploadFile):
     		"""
 		return HTMLResponse(content=html_content, status_code=200)
 
+	else:
+		return {"message": "invalid file type. Upload either an image or a video"}
+
 
 
 
