@@ -89,6 +89,7 @@ async def create_upload_file(item: UploadFile):
 		shutil.copy(output_file_path, "./static/video.mp4")
 		input_video = "./static/video.mp4"
 		output_video = "output_video.mp4"
+		os.remove("./output_video.mp4")
 		ffmpeg_command = [
     			"ffmpeg",
     			"-i", input_video,
